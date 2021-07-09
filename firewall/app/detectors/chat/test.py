@@ -7,5 +7,9 @@ class ChatAppDetectorTest(TestCase):
         self.detector = ChatAppDetector()
 
     def test_start_chat_data(self):
-        packet_data = "START‬‬ ‫‪CHAT test: 3, 50"
+        packet_data = "CHAT:\nSTART‬‬ ‫‪CHAT test: 3, 50"
         self.assertTrue(self.detector.detect(packet_data))
+
+    def test_non_chat_data(self):
+        packet_data = "Random bullshit go !!!"
+        self.assertFalse(self.detector.detect(packet_data))
