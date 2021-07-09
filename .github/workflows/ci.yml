@@ -5,13 +5,15 @@ jobs:
   test:
     runs-on: ubuntu-20.04
     env:
-      PIPENV_VERSION: "2021.5.29"
+      PIPENV_VERSION: 2021.5.29
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
+      - name: just echo env
+        run: echo $PIPENV_VERSION
       - name: Install dependencies
         run: |
           pip install pipenv==$PIPENV_VERSION
