@@ -15,6 +15,6 @@ class PacketType(IntEnum):
 @dataclass
 class Packet:
     data: str
-    dest_id: int
+    dst_id: int
     src_id: int
     packet_type: PacketType

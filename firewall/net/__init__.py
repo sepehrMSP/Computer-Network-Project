@@ -16,8 +16,8 @@ class NetRule:
     direction: Direction
     packet_type: PacketType
     action: Action
-    id_src: int = None
-    id_des: int = None
+    src_id: int = None
+    dst_id: int = None
 
 
 class NetFirewall(Firewall[NetRule]):
@@ -44,13 +44,16 @@ class NetFirewall(Firewall[NetRule]):
         if rule.packet_type != packet.packet_type:
             return False
 
-        if rule.direction == Direction.INPUT and rule.id_src != None and rule.id_src != packet.src_id:
+        src_id_mismatch: bool = rule.src_id != None and rule.src_id != packet.src_id
+        dst_id_mismatch: bool = rule.dst_id != None and rule.dst_id != packet.dst_id
+
+        if rule.direction == Direction.INPUT and src_id_mismatch:
             return False
 
-        if rule.direction == Direction.OUTPUT and rule.id_des != None and rule.id_des != packet.dest_id:
+        if rule.direction == Direction.OUTPUT and dst_id_mismatch:
             return False
 
-        if rule.direction == Direction.FORWARD and (rule.id_des != None and rule.id_des != packet.dest_id) and (rule.id_src != None and rule.id_src != packet.src_id):
+        if rule.direction == Direction.FORWARD and (dst_id_mismatch or src_id_mismatch):
             return False
 
         return True

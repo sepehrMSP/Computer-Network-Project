@@ -13,11 +13,11 @@ class NetFirewallTest(TestCase):
             direction=Direction.INPUT,
             packet_type=PacketType.ROUTING_REQ,
             action=Action.DROP,
-            id_des=2,
+            dst_id=2,
         )
         packet = Packet(
             src_id=1,
-            dest_id=2,
+            dst_id=2,
             packet_type=PacketType.ROUTING_REQ,
             data="",
         )
@@ -29,11 +29,11 @@ class NetFirewallTest(TestCase):
             direction=Direction.FORWARD,
             packet_type=PacketType.CONN_REQ,
             action=Action.DROP,
-            id_des=2,
+            dst_id=2,
         )
         packet = Packet(
             src_id=1,
-            dest_id=2,
+            dst_id=2,
             packet_type=PacketType.CONN_REQ,
             data="",
         )
@@ -45,11 +45,11 @@ class NetFirewallTest(TestCase):
             direction=Direction.INPUT,
             packet_type=PacketType.ROUTING_REQ,
             action=Action.DROP,
-            id_des=2,
+            dst_id=2,
         )
         packet = Packet(
             src_id=1,
-            dest_id=2,
+            dst_id=2,
             packet_type=PacketType.CONN_REQ,
             data="",
         )
