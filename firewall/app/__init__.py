@@ -17,15 +17,19 @@ class AppRule:
 
 
 class AppFirewall(Firewall[AppRule]):
-    def __init__(self, rules: List[Type[AppRule]] = None, detectors: List[Type[AppDetector]] = None):
+    def __init__(self, rules: List[Type[AppRule]] = None, detectors: List[Type[AppDetector]] = None, default_action: Action = Action.ACCEPT):
         if rules is None:
             rules = []
         self.rules = rules
         if detectors is None:
             detectors = []
         self.detectors = detectors
+        self.default_action = default_action
 
     def add_rule(self, rule: AppRule):
+        old_rule = next(filter(lambda r: r.app == rule.app, self.rules), None)
+        if old_rule is not None:
+            self.remove_rule(old_rule)
         self.rules.append(rule)
 
     def remove_rule(self, rule: AppRule):
@@ -36,8 +40,9 @@ class AppFirewall(Firewall[AppRule]):
         for rule in self.rules:
             if rule.app == detected_app:
                 return rule.action
+        return self.default_action
 
     def _detect_app(self, packet_data: str) -> App:
         for detector in self.detectors:
-            if detector.detect():
+            if detector.detect(packet_data):
                 return detector.APP
