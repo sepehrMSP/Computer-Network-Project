@@ -1,11 +1,8 @@
 from enum import IntEnum
 from dataclasses import dataclass
+from typing import List, Type
 from packet import PacketType
-
-
-class Action(IntEnum):
-    DROP = 0
-    ACCEPT = 1
+from firewall import Action, FireWall
 
 
 class Direction(IntEnum):
@@ -19,28 +16,19 @@ class NetRule:
     direction: Direction
     packet_type: PacketType
     action: Action
-
     id_src: int = None
     id_des: int = None
 
 
-class FireWall:
-    def __init__(self):
-        self.table = dict()
-
-    def add_rule(self):
+class NetFireWall(FireWall[NetRule]):
+    def __init__(self, rules: List[Type[NetRule]] = []):
+        self.rules = rules
+        
+    def add_rule(self, rule: NetRule):
         pass
 
-    def remove_rule(self):
+    def remove_rule(self, rule: NetRule):
         pass
 
-    def filter(self):
+    def filter(self, *args, **kwargs) -> Action:
         pass
-
-
-class AppFireWall(FireWall):
-    pass
-
-
-class NetFireWall(FireWall):
-    pass
