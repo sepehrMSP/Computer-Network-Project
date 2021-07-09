@@ -50,14 +50,6 @@ class Node:
                             data=str(self.port))
             self.send_packet(packet=packet)
 
-    def self_route(self, packet: Packet):
-        if packet.packet_type == PacketType.ROUTING_REQ:
-            packet = Packet(src_id=self.id,
-                            dst_id=packet.src_id,
-                            packet_type=PacketType.ROUTING_RESP,
-                            data='')
-            self.route_resp(packet=packet, sender_id=self.id)
-
     def route_packet(self, packet: Packet, sender_id: int):
         assert packet.dst_id != -1
 
