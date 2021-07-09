@@ -41,7 +41,7 @@ class Node:
         if self.parent_id != -1:
             data = str(self.port)
             packet = Packet(src_id=self.id,
-                            dest_id=self.parent_id,
+                            dst_id=self.parent_id,
                             packet_type=PacketType.CONN_REQ,
                             data=data)
             self.send_packet(packet=packet)
@@ -49,36 +49,36 @@ class Node:
     def self_route(self, packet: Packet):
         if packet.packet_type == PacketType.ROUTING_REQ:
             packet = Packet(src_id=self.id,
-                            dest_id=packet.src_id,
+                            dst_id=packet.src_id,
                             packet_type=PacketType.ROUTING_RESP,
                             data='')
             self.route_resp(packet=packet, sender_id=self.id)
 
     def route_packet(self, packet: Packet):
         # todo
-        if packet.dest_id == self.id:
+        if packet.dst_id == self.id:
             self.self_route(packet=packet)
-        if packet.dest_id in self.left_children:
+        if packet.dst_id in self.left_children:
             pass
-        elif packet.dest_id in self.right_children:
+        elif packet.dst_id in self.right_children:
             pass
         elif self.parent_id != -1:
             pass
         else:
-            data = f'DESTINATION {packet.dest_id} NOT FOUND'
+            data = f'DESTINATION {packet.dst_id} NOT FOUND'
             packet = Packet(src_id=self.id,
-                            dest_id=packet.src_id,
+                            dst_id=packet.src_id,
                             packet_type=PacketType.DEST_NOT_FOUND,
                             data=data)
             self.route_packet(packet)
 
     def send_packet(self, packet: Packet):
         # todo why this function exist?
-        if packet.dest_id != -1:
-            if packet.dest_id in self.known_clients:
+        if packet.dst_id != -1:
+            if packet.dst_id in self.known_clients:
                 self.route_packet(packet=packet)
             else:
-                print(f'Unknown destination {packet.dest_id}')
+                print(f'Unknown destination {packet.dst_id}')
         else:
             # todo
             pass
@@ -90,9 +90,9 @@ class Node:
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))
 
-    def route_req(self, dest_id: int):
+    def route_req(self, dst_id: int):
         packet = Packet(src_id=self.id,
-                        dest_id=dest_id,
+                        dst_id=dst_id,
                         packet_type=PacketType.ROUTING_REQ,
                         data='')
         self.route_packet(packet=packet)
@@ -110,7 +110,7 @@ class Node:
     def public_advertise(self, destination_id: int):
         if destination_id != -1:
             packet = Packet(src_id=self.id,
-                            dest_id=destination_id,
+                            dst_id=destination_id,
                             packet_type=PacketType.PUBLIC_ADV,
                             data='')
             self.route_packet(packet)
@@ -121,7 +121,7 @@ class Node:
     def parent_advertise(self, new_node_id: int):
         if self.parent_id != -1:
             packet = Packet(src_id=self.id,
-                            dest_id=self.parent_id,
+                            dst_id=self.parent_id,
                             packet_type=PacketType.PARENT_ADV,
                             data=str(new_node_id))
             self.route_packet(packet=packet)
