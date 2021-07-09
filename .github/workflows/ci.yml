@@ -5,7 +5,7 @@ jobs:
   test:
     runs-on: ubuntu-20.04
     env:
-      PIPENV_VERSION: 2021.5.29
+      PIPENV_VERSION: "2021.5.29"
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
