@@ -10,7 +10,7 @@ class Action(IntEnum):
 T = TypeVar('T')
 
 
-class FireWall(Generic[T]):
+class Firewall(Generic[T]):
     def add_rule(self, rule: T):
         pass
 

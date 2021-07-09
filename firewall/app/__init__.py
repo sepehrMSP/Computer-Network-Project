@@ -1,7 +1,7 @@
 from enum import IntEnum
 from dataclasses import dataclass
 from typing import List, Type
-from firewall import Action, FireWall
+from firewall import Action, Firewall
 from firewall.app.detectors import AppDetector
 
 
@@ -16,9 +16,13 @@ class AppRule:
     action: Action
 
 
-class AppFireWall(FireWall[AppRule]):
-    def __init__(self, rules: List[Type[AppRule]] = [], detectors: List[Type[AppDetector]] = []):
+class AppFirewall(Firewall[AppRule]):
+    def __init__(self, rules: List[Type[AppRule]] = None, detectors: List[Type[AppDetector]] = None):
+        if rules is None:
+            rules = []
         self.rules = rules
+        if detectors is None:
+            detectors = []
         self.detectors = detectors
 
     def add_rule(self, rule: AppRule):
