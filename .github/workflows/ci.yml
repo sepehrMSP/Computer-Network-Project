@@ -2,7 +2,7 @@ name: CI
 on: push
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -15,4 +15,4 @@ jobs:
           pip install pipenv==2021.5.29
           pipenv install --deploy --dev
       - name: Test with pytest
-        run: pytest
+        run: pipenv run pytest
