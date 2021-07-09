@@ -1,5 +1,4 @@
 import socket
-from manager import MANAGER_PORT, MANAGER_HOST
 from packet import Packet, PacketType
 import json
 
@@ -39,6 +38,7 @@ class Node:
         return data
 
     def join_network(self):
+        from manager import MANAGER_PORT, MANAGER_HOST
         message = f'{self.id} REQUESTS FOR CONNECTING TO NETWORK ON PORT {self.port}'
         data = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, message=message, get_response=True)
         self.parent_id, self.parent_port = int(data['content'].split()[Node.PARENT_ID_POS]), \
