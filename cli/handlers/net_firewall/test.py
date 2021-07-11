@@ -8,7 +8,7 @@ class NetFirewallCommandHandlerTest(TestCase):
     def setUp(self):
         self.firewall = NetFirewall()
         self.command_handler = NetFirewallCommandHandler(self.firewall)
-    
+
     def test_valid_command(self):
         cmd = "FILTER INPUT 1 * 21 DROP"
         self.assertTrue(self.command_handler.can_handle(cmd))

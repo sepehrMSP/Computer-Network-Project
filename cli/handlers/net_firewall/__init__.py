@@ -31,7 +31,8 @@ class NetFirewallCommandHandler(CommandHandler):
             )
         )
 
-    def _get_pattern(self):
+    @staticmethod
+    def _get_pattern():
         directions = '|'.join([i.name for i in Direction])
         actions = '|'.join([i.name for i in Action])
         packet_types = '|'.join([str(i.value) for i in PacketType])

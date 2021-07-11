@@ -1,10 +1,11 @@
-from typing import List, Type
-from cli.handlers import CommandHandler
+from typing import List
+
 from cli import CommandError
+from cli.handlers import CommandHandler
 
 
 class CommandLineManager:
-    def __init__(self, handlers: List[Type[CommandHandler]] = None):
+    def __init__(self, handlers: List[CommandHandler] = None):
         if handlers is None:
             handlers = []
         self.handlers = handlers

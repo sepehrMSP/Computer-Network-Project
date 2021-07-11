@@ -1,5 +1,3 @@
-
-
 class AppDetector:
     APP = None
 

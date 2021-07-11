@@ -1,4 +1,5 @@
 import re
+
 from cli.handlers import CommandHandler
 from firewall import Action
 from firewall.app import AppFirewall, App, AppRule
@@ -24,7 +25,8 @@ class AppFirewallCommandHandler(CommandHandler):
             )
         )
 
-    def _get_pattern(self):
+    @staticmethod
+    def _get_pattern():
         apps = '|'.join([i.name for i in App])
         actions = '|'.join([i.name for i in Action])
 

@@ -1,11 +1,11 @@
 import re
-from typing import Type
+
 from cli.handlers import CommandHandler
 from node import Node
 
 
 class ConnectCommandHandler(CommandHandler):
-    def __init__(self, node: Type[Node]):
+    def __init__(self, node: Node):
         self.node = node
 
     def can_handle(self, command: str) -> bool:
@@ -16,9 +16,10 @@ class ConnectCommandHandler(CommandHandler):
     def handle(self, command: str):
         captured_args = re.fullmatch(self._get_pattern(), command).groupdict()
         self.node.join_network(
-            port=captured_args['port'],
-            id=captured_args['id'],
+            port=int(captured_args['port']),
+            id=int(captured_args['id']),
         )
-        
-    def _get_pattern(self):
+
+    @staticmethod
+    def _get_pattern():
         return 'CONNECT AS (?P<id>\d+) ON PORT (?P<port>\d+)'
