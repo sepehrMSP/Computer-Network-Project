@@ -7,12 +7,13 @@ class Node:
     PARENT_ID_POS = 2
     PARENT_PORT_POS = -1
 
-    def __init__(self, port: int, id: int, firewall):
-        self.port = port
-        self.id = id
+    def __init__(self, net_firewall, app_firewall):
+        self.port: int = None
+        self.id: int = None
         self.left_children = set()
         self.right_children = set()
-        self.firewall = firewall
+        self.app_firewall = app_firewall
+        self.net_firewall = net_firewall
         self.parent_id = None
         self.parent_port = None
         self.left_child_id = None
@@ -25,22 +26,23 @@ class Node:
     def is_root(self):
         return self.parent_id == -1
 
-    def send_tcp(self, message, port: int, host=socket.gethostname(), get_response=False) -> dict:
+    def send_tcp(self, data, port: int, host=socket.gethostname(), get_response=False) -> dict:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((host, port))
-        message = {'content': message, 'sender_id': self.id}
-        message = json.dumps(message)
-        client.send(message.encode('utf-8'))
-        data = None
+        data = json.dumps(data)
+        client.send(data.encode('utf-8'))
+        resp = None
         if get_response:
-            data = json.loads(client.recv(1024).decode('utf-8'))
+            resp = json.loads(client.recv(1024).decode('utf-8'))
         client.close()
-        return data
+        return resp
 
-    def join_network(self):
+    def join_network(self, port: int, id: int):
+        self.id = id
+        self.port = port
         from manager import MANAGER_PORT, MANAGER_HOST
         message = f'{self.id} REQUESTS FOR CONNECTING TO NETWORK ON PORT {self.port}'
-        data = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, message=message, get_response=True)
+        data = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, data=message, get_response=True)
         self.parent_id, self.parent_port = int(data['content'].split()[Node.PARENT_ID_POS]), \
                                            int(data['content'].split()[Node.PARENT_PORT_POS])
         if self.parent_id != -1:
@@ -54,11 +56,11 @@ class Node:
         assert packet.dst_id != -1
 
         if packet.dst_id in self.left_children:
-            self.send_tcp(message=packet, port=self.left_child_port)
+            self.send_tcp(data=packet, port=self.left_child_port)
         elif packet.dst_id in self.right_children:
-            self.send_tcp(message=packet, port=self.right_child_port)
+            self.send_tcp(data=packet, port=self.right_child_port)
         elif not self.is_root():
-            self.send_tcp(message=packet, port=self.parent_port)
+            self.send_tcp(data=packet, port=self.parent_port)
         else:
             data = f'DESTINATION {packet.dst_id} NOT FOUND'
             packet = Packet(src_id=self.id,
@@ -70,14 +72,14 @@ class Node:
     def route_to_all(self, packet: Packet, sender_id: int):
         assert packet.dst_id == -1
         if sender_id == self.parent_id:
-            self.send_tcp(message=packet, port=self.left_child_port)
-            self.send_tcp(message=packet, port=self.right_child_port)
+            self.send_tcp(data=packet, port=self.left_child_port)
+            self.send_tcp(data=packet, port=self.right_child_port)
         elif sender_id == self.left_child_id:
-            self.send_tcp(message=packet, port=self.parent_port)
-            self.send_tcp(message=packet, port=self.right_child_port)
+            self.send_tcp(data=packet, port=self.parent_port)
+            self.send_tcp(data=packet, port=self.right_child_port)
         elif sender_id == self.right_child_id:
-            self.send_tcp(message=packet, port=self.parent_port)
-            self.send_tcp(message=packet, port=self.left_child_port)
+            self.send_tcp(data=packet, port=self.parent_port)
+            self.send_tcp(data=packet, port=self.left_child_port)
 
     def send_packet(self, packet: Packet, sender_id=None):
         if sender_id is None:
@@ -90,6 +92,14 @@ class Node:
                 print(f'Unknown destination {packet.dst_id}')
         else:
             self.route_to_all(packet=packet, sender_id=sender_id)
+
+    def get_sender_id(self, port: int) -> int:
+        if port == self.parent_port:
+            return self.parent_id
+        elif port == self.left_child_port:
+            return self.left_child_id
+        else:
+            return self.right_child_id
 
     def receive_packet(self):
         # todo
