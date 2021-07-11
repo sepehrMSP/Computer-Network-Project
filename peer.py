@@ -1,8 +1,12 @@
 import socket
 import threading
 
+from cli.handlers.advertise import AdvertiseCommandHandler
+from cli.handlers.route import RouteCommandHandler
+
 from cli.handlers.app_firewall import AppFirewallCommandHandler
 from cli.handlers.connect import ConnectCommandHandler
+from cli.handlers.known_clients import KnownClientsCommandHandler
 from cli.handlers.net_firewall import NetFirewallCommandHandler
 from cli.manager import CommandLineManager
 from firewall.app import AppFirewall
@@ -40,6 +44,9 @@ def main():
         NetFirewallCommandHandler(net_firewall),
         AppFirewallCommandHandler(app_firewall),
         ConnectCommandHandler(node),
+        AdvertiseCommandHandler(node),
+        KnownClientsCommandHandler(node),
+        RouteCommandHandler(node),
     ]
     cl_manager = CommandLineManager(command_handlers)
     cli_thread(cl_manager)
