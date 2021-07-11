@@ -17,7 +17,7 @@ class AppRule:
 
 
 class AppFirewall(Firewall[AppRule]):
-    def __init__(self, rules: List[Type[AppRule]] = None, detectors: List[Type[AppDetector]] = None, default_action: Action = Action.ACCEPT):
+    def __init__(self, rules: List[AppRule] = None, detectors: List[AppDetector] = None, default_action: Action = Action.ACCEPT):
         if rules is None:
             rules = []
         self.rules = rules
