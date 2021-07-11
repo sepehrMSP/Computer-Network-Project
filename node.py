@@ -1,3 +1,4 @@
+from typing import Optional
 import socket
 from packet import Packet, PacketType
 import json
@@ -6,16 +7,17 @@ import json
 class Node:
     PARENT_ID_POS = 2
     PARENT_PORT_POS = -1
+    UNKNOWN_ID = -2
 
-    def __init__(self, net_firewall, app_firewall):
-        self.port: int = None
-        self.id: int = None
-        self.left_children = set()
-        self.right_children = set()
+    def __init__(self, net_firewall=None, app_firewall=None):
+        self.port: Optional[int] = None
+        self.id: Optional[int] = None
         self.app_firewall = app_firewall
         self.net_firewall = net_firewall
         self.parent_id = None
         self.parent_port = None
+        self.left_children = set()
+        self.right_children = set()
         self.left_child_id = None
         self.left_child_port = None
         self.right_child_id = None
@@ -26,7 +28,14 @@ class Node:
     def is_root(self):
         return self.parent_id == -1
 
-    def send_tcp(self, data, port: int, host=socket.gethostname(), get_response=False) -> dict:
+    def get_sending_port(self):
+        return self.port + 1
+
+    def get_receiving(self):
+        return self.port
+
+    @staticmethod
+    def send_tcp(data, port: int, host=socket.gethostname(), get_response=False):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((host, port))
         data = json.dumps(data)
@@ -43,8 +52,8 @@ class Node:
         from manager import MANAGER_PORT, MANAGER_HOST
         message = f'{self.id} REQUESTS FOR CONNECTING TO NETWORK ON PORT {self.port}'
         data = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, data=message, get_response=True)
-        self.parent_id, self.parent_port = int(data['content'].split()[Node.PARENT_ID_POS]), \
-                                           int(data['content'].split()[Node.PARENT_PORT_POS])
+        self.parent_id, self.parent_port = int(data.split()[Node.PARENT_ID_POS]), \
+                                           int(data.split()[Node.PARENT_PORT_POS])
         if self.parent_id != -1:
             packet = Packet(src_id=self.id,
                             dst_id=self.parent_id,
@@ -98,12 +107,38 @@ class Node:
             return self.parent_id
         elif port == self.left_child_port:
             return self.left_child_id
-        else:
+        elif port == self.right_child_port:
             return self.right_child_id
+        else:
+            return Node.UNKNOWN_ID
 
-    def receive_packet(self):
-        # todo
-        pass
+    def receive_tcp(self, conn, addr):
+        sender_port = addr[1]
+        sender_id = self.get_sender_id(port=sender_port)
+        resp = json.loads(conn.recv(1024).decode('utf-8'))
+        conn.close()
+        self.receive_packet(packet=resp, sender_id=sender_id)
+
+    def add_new_child(self, packet: Packet):
+        assert packet.packet_type == PacketType.CONN_REQ
+        child_id = packet.src_id
+        child_port = int(packet.data)
+        if self.left_child_id is None:
+            self.left_child_id = child_id
+            self.left_child_port = child_port
+            self.left_children.add(child_id)
+        elif self.right_child_id is None:
+            self.right_child_id = child_id
+            self.right_child_port = child_port
+            self.right_children.add(child_id)
+        else:
+            print(f'ERROR: node {self.id} has already 2 children. connection request of node {child_id} rejected')
+            return
+        self.known_clients.add(child_id)
+
+    def receive_packet(self, packet: Packet, sender_id: int):
+        if packet.packet_type == PacketType.CONN_REQ:
+            self.add_new_child(packet)
 
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))
