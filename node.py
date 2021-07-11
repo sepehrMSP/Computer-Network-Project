@@ -133,21 +133,23 @@ class Node:
         self.receive_packet(packet=resp, sender_id=sender_id)
 
     def add_new_child(self, packet: Packet):
-        assert packet.packet_type == PacketType.CONN_REQ
+        assert (packet.packet_type == PacketType.CONN_REQ) or (packet.packet_type == PacketType.PARENT_ADV)
         child_id = packet.src_id
         child_port = int(packet.data)
-        if self.left_child_id is None:
-            self.left_child_id = child_id
-            self.left_child_port = child_port
-            self.left_children.add(child_id)
-        elif self.right_child_id is None:
-            self.right_child_id = child_id
-            self.right_child_port = child_port
-            self.right_children.add(child_id)
-        else:
-            print(f'ERROR: node {self.id} has already 2 children. connection request of node {child_id} rejected')
-            return
+        if packet.packet_type == PacketType.CONN_REQ:
+            if self.left_child_id is None:
+                self.left_child_id = child_id
+                self.left_child_port = child_port
+                self.left_children.add(child_id)
+            elif self.right_child_id is None:
+                self.right_child_id = child_id
+                self.right_child_port = child_port
+                self.right_children.add(child_id)
+            else:
+                print(f'ERROR: node {self.id} has already 2 children. connection request of node {child_id} rejected')
+                return
         self.known_clients.add(child_id)
+        self.parent_advertise(new_node_id=child_id)
 
     def check_for_new_host(self, packet: Packet):
         if packet.dst_id == self.id:
@@ -174,6 +176,18 @@ class Node:
             self.modify_packet(packet=packet, sender_id=sender_id)
             self.transmit_packet(packet=packet)
 
+    def handle_public_adv(self, packet: Packet, sender_id: int):
+        if packet.dst_id == self.id:
+            self.known_clients.add(packet.src_id)
+        elif packet.dst_id == -1:
+            self.known_clients.add(packet.src_id)
+            self.transmit_packet(packet=packet, sender_id=sender_id)
+        else:
+            self.transmit_packet(packet=packet)
+
+    def handle_application_layer(self, packet: Packet):
+        pass
+
     def receive_packet(self, packet: Packet, sender_id: int):
         self.check_for_new_host(packet=packet)
         if packet.packet_type == PacketType.CONN_REQ:
@@ -184,6 +198,12 @@ class Node:
             self.handle_routing_req_packet(packet=packet)
         elif packet.packet_type == PacketType.ROUTING_RESP:
             self.handle_routing_resp_packet(packet=packet, sender_id=sender_id)
+        elif packet.packet_type == PacketType.PARENT_ADV:
+            self.add_new_child(packet=packet)
+        elif packet.packet_type == PacketType.PUBLIC_ADV:
+            self.handle_public_adv(packet=packet, sender_id=sender_id)
+        elif packet.packet_type == PacketType.MESSAGE:
+            self.handle_application_layer(packet=packet)
 
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))
