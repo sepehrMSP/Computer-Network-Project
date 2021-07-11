@@ -140,10 +140,16 @@ class Node:
         if packet.dst_id == self.id:
             self.known_clients.add(packet.src_id)
 
+    def dest_not_found(self, packet: Packet):
+        if not self.is_in_chat:
+            print(f'DESTINATION {packet.dst_id} NOT FOUND')
+
     def receive_packet(self, packet: Packet, sender_id: int):
         self.check_for_new_host(packet=packet)
         if packet.packet_type == PacketType.CONN_REQ:
             self.add_new_child(packet)
+        if packet.packet_type == PacketType.DEST_NOT_FOUND:
+            self.dest_not_found(packet)
 
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))
