@@ -21,12 +21,12 @@ class NetRule:
 
 
 class NetFirewall(Firewall[NetRule]):
-    def __init__(self, rules: List[Type[NetRule]] = None, default_action: Action = Action.ACCEPT):
+    def __init__(self, rules: List[NetRule] = None, default_action: Action = Action.ACCEPT):
         if rules is None:
             rules = []
         self.rules = rules
         self.default_action = default_action
-        
+
     def add_rule(self, rule: NetRule):
         self.rules.append(rule)
 
@@ -40,12 +40,13 @@ class NetFirewall(Firewall[NetRule]):
 
         return self.default_action
 
-    def _match_rule(self, rule: NetRule, packet: Packet) -> bool:
+    @staticmethod
+    def _match_rule(rule: NetRule, packet: Packet) -> bool:
         if rule.packet_type != packet.packet_type:
             return False
 
-        src_id_mismatch: bool = rule.src_id != None and rule.src_id != packet.src_id
-        dst_id_mismatch: bool = rule.dst_id != None and rule.dst_id != packet.dst_id
+        src_id_mismatch: bool = (rule.src_id is not None) and (rule.src_id != packet.src_id)
+        dst_id_mismatch: bool = (rule.dst_id is not None) and (rule.dst_id != packet.dst_id)
 
         if rule.direction == Direction.INPUT and src_id_mismatch:
             return False
