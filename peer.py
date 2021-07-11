@@ -8,6 +8,9 @@ from cli.manager import CommandLineManager
 from cli.handlers.net_firewall import NetFirewallCommandHandler
 from cli.handlers.app_firewall import AppFirewallCommandHandler
 from cli.handlers.connect import ConnectCommandHandler
+from cli.handlers.advertise import AdvertiseCommandHandler
+from cli.handlers.known_clients import KnownClientsCommandHandler
+from cli.handlers.route import RouteCommandHandler
 
 
 def cli_thread(clm: Type[CommandLineManager]):
@@ -30,6 +33,9 @@ def main():
         NetFirewallCommandHandler(net_firewall),
         AppFirewallCommandHandler(app_firewall),
         ConnectCommandHandler(node),
+        AdvertiseCommandHandler(node),
+        KnownClientsCommandHandler(node),
+        RouteCommandHandler(node),
     ]
     cl_manager = CommandLineManager(command_handlers)
     cli_thread(cl_manager)
