@@ -1,18 +1,28 @@
+import socket
 import threading
-from typing import Type
-from node import Node
+
+from cli.handlers.app_firewall import AppFirewallCommandHandler
+from cli.handlers.connect import ConnectCommandHandler
+from cli.handlers.net_firewall import NetFirewallCommandHandler
+from cli.manager import CommandLineManager
 from firewall.app import AppFirewall
 from firewall.app.detectors.chat import ChatAppDetector
 from firewall.net import NetFirewall
-from cli.manager import CommandLineManager
-from cli.handlers.net_firewall import NetFirewallCommandHandler
-from cli.handlers.app_firewall import AppFirewallCommandHandler
-from cli.handlers.connect import ConnectCommandHandler
+from node import Node
 
 
-def cli_thread(clm: Type[CommandLineManager]):
+def cli_thread(clm: CommandLineManager):
     while True:
         clm.handle(input())
+
+
+def server_thread(node: Node):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((socket.gethostname(), node.get_receiving()))
+        s.listen()
+        while True:
+            conn, addr = s.accept()
+            threading.Thread(target=node.receive_tcp, args=(conn, addr), daemon=True).start()
 
 
 def main():
