@@ -136,7 +136,12 @@ class Node:
             return
         self.known_clients.add(child_id)
 
+    def check_for_new_host(self, packet: Packet):
+        if packet.dst_id == self.id:
+            self.known_clients.add(packet.src_id)
+
     def receive_packet(self, packet: Packet, sender_id: int):
+        self.check_for_new_host(packet=packet)
         if packet.packet_type == PacketType.CONN_REQ:
             self.add_new_child(packet)
 
