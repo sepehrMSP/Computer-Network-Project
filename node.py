@@ -59,9 +59,9 @@ class Node:
                             dst_id=self.parent_id,
                             packet_type=PacketType.CONN_REQ,
                             data=str(self.port))
-            self.send_packet(packet=packet)
+            self.send_new_packet(packet=packet)
 
-    def route_packet(self, packet: Packet, sender_id: int):
+    def route_packet(self, packet: Packet):
         assert packet.dst_id != -1
 
         if packet.dst_id in self.left_children:
@@ -76,7 +76,7 @@ class Node:
                             dst_id=packet.src_id,
                             packet_type=PacketType.DEST_NOT_FOUND,
                             data=data)
-            self.route_packet(packet=packet, sender_id=sender_id)
+            self.route_packet(packet=packet)
 
     def route_to_all(self, packet: Packet, sender_id: int):
         assert packet.dst_id == -1
@@ -90,13 +90,26 @@ class Node:
             self.send_tcp(data=packet, port=self.parent_port)
             self.send_tcp(data=packet, port=self.left_child_port)
 
-    def send_packet(self, packet: Packet, sender_id=None):
-        if sender_id is None:
-            sender_id = self.id
+    """
+    For packets whose initiator is another host 
+    """
 
+    def transmit_packet(self, packet: Packet, sender_id: int = None):
+        if packet.dst_id != -1:
+            self.route_packet(packet=packet)
+        else:
+            assert sender_id is not None
+            self.route_to_all(packet=packet, sender_id=sender_id)
+
+    """
+    For packets whose initiator is self
+    """
+
+    def send_new_packet(self, packet: Packet):
+        sender_id = self.id
         if packet.dst_id != -1:
             if packet.dst_id in self.known_clients:
-                self.route_packet(packet=packet, sender_id=sender_id)
+                self.route_packet(packet=packet)
             else:
                 print(f'Unknown destination {packet.dst_id}')
         else:
@@ -141,32 +154,54 @@ class Node:
             self.known_clients.add(packet.src_id)
 
     def dest_not_found(self, packet: Packet):
-        if not self.is_in_chat:
-            print(f'DESTINATION {packet.dst_id} NOT FOUND')
+        if packet.dst_id == self.id:
+            if not self.is_in_chat:
+                print(f'DESTINATION {packet.dst_id} NOT FOUND')
+        else:
+            self.transmit_packet(packet=packet)
+
+    def handle_routing_req_packet(self, packet: Packet):
+        if packet.dst_id == self.id:
+            self.route_resp(packet.src_id)
+        else:
+            self.transmit_packet(packet=packet)
+
+    def handle_routing_resp_packet(self, packet: Packet, sender_id: int):
+        if packet.dst_id == self.id:
+            print(f'the path between {packet.src_id} and {packet.dst_id}:\n'
+                  f'{packet.data}')
+        else:
+            self.modify_packet(packet=packet, sender_id=sender_id)
+            self.transmit_packet(packet=packet)
 
     def receive_packet(self, packet: Packet, sender_id: int):
         self.check_for_new_host(packet=packet)
         if packet.packet_type == PacketType.CONN_REQ:
-            self.add_new_child(packet)
-        if packet.packet_type == PacketType.DEST_NOT_FOUND:
-            self.dest_not_found(packet)
+            self.add_new_child(packet=packet)
+        elif packet.packet_type == PacketType.DEST_NOT_FOUND:
+            self.dest_not_found(packet=packet)
+        elif packet.packet_type == PacketType.ROUTING_REQ:
+            self.handle_routing_req_packet(packet=packet)
+        elif packet.packet_type == PacketType.ROUTING_RESP:
+            self.handle_routing_resp_packet(packet=packet, sender_id=sender_id)
 
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))
 
     def route_req(self, dst_id: int):
+        assert dst_id != -1
         packet = Packet(src_id=self.id,
                         dst_id=dst_id,
                         packet_type=PacketType.ROUTING_REQ,
                         data='')
-        self.send_packet(packet=packet)
+        self.send_new_packet(packet=packet)
 
     def route_resp(self, requester_id: int):
         packet = Packet(src_id=self.id,
                         dst_id=requester_id,
                         packet_type=PacketType.ROUTING_RESP,
                         data=str(self.id))
-        self.send_packet(packet=packet)
+        self.send_new_packet(packet=packet)
 
     def modify_routing_resp(self, packet: Packet, sender_id: int):
         if sender_id == self.parent_id:
@@ -183,7 +218,7 @@ class Node:
                         dst_id=destination_id,
                         packet_type=PacketType.PUBLIC_ADV,
                         data='')
-        self.send_packet(packet)
+        self.send_new_packet(packet)
 
     def parent_advertise(self, new_node_id: int):
         if not self.is_root():
@@ -191,4 +226,4 @@ class Node:
                             dst_id=self.parent_id,
                             packet_type=PacketType.PARENT_ADV,
                             data=str(new_node_id))
-            self.send_packet(packet=packet)
+            self.send_new_packet(packet=packet)
