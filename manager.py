@@ -1,5 +1,5 @@
 import socket
-import threading
+from threading import Thread
 import re
 from node import Node
 
@@ -58,4 +58,4 @@ if __name__ == "__main__":
         s.listen()
         while True:
             conn, addr = s.accept()
-            threading._start_new_thread(handle_client, (conn, addr))
+            Thread(target=handle_client, args=(conn, addr), daemon=True).start()
