@@ -39,15 +39,20 @@ class Node:
 
     def send_tcp(self, data, port: int, host=socket.gethostname(), get_response=False):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        client.bind((socket.gethostname(), self.get_sending_port()))
         client.connect((host, port))
+        data = {'data': data, 'sender_id': self.id}
 
-        try:
-            data = json.dumps(data)
-        except:
-            data = dataclasses.asdict(data)
-            data = json.dumps(data)
+        def dumper(obj):
+            try:
+                return obj.ToJSON()
+            except:
+                try:
+                    obj = dataclasses.asdict(obj)
+                    return json.dumps(obj)
+                except:
+                    return obj.__dict__
+
+        data = json.dumps(data, default=dumper, indent=2)
 
         client.send(data.encode('utf-8'))
         resp = None
@@ -61,9 +66,9 @@ class Node:
         self.port = port
         from manager import MANAGER_PORT, MANAGER_HOST
         message = f'{self.id} REQUESTS FOR CONNECTING TO NETWORK ON PORT {self.port}'
-        data = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, data=message, get_response=True)
-        self.parent_id, self.parent_port = int(data.split()[Node.PARENT_ID_POS]), \
-                                           int(data.split()[Node.PARENT_PORT_POS])
+        resp = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, data=message, get_response=True)
+        self.parent_id, self.parent_port = int(resp.split()[Node.PARENT_ID_POS]), \
+                                           int(resp.split()[Node.PARENT_PORT_POS])
         self.server.set_node(node=self)
         print(self.parent_id, self.port, 'FIRST TIME?')
         self.server.start()
@@ -153,13 +158,11 @@ class Node:
             return Node.UNKNOWN_ID
 
     def receive_tcp(self, conn, addr):
-        sender_port = addr[1]
-        print(conn, addr)
-        print(f'sender_port {sender_port}')
-        sender_id = self.get_sender_id(sender_port=sender_port)
-        resp = json.loads(conn.recv(1024).decode('utf-8'), object_hook=lambda d: SimpleNamespace(**d))
+        resp = json.loads(conn.recv(1024).decode('utf-8'))
+        packet = Packet.dict_to_packet(json.loads(resp['data']))
+        sender_id = int(resp['sender_id'])
         conn.close()
-        self.receive_packet(packet=resp, sender_id=sender_id)
+        self.receive_packet(packet=packet, sender_id=sender_id)
 
     def handle_advertise_parent(self, packet: Packet, sender_id: int):
         assert packet.packet_type == PacketType.PARENT_ADV

@@ -18,3 +18,7 @@ class Packet:
     dst_id: int
     src_id: int
     packet_type: PacketType
+
+    @classmethod
+    def dict_to_packet(cls, dikt):
+        return cls(data=dikt['data'], dst_id=dikt['dst_id'], src_id=dikt['src_id'], packet_type=dikt['packet_type'])

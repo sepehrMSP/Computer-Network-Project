@@ -23,7 +23,8 @@ class PortId:
 
 def get_new_node(node_request) -> Optional[PortId]:
     connection_request = json.loads(node_request)
-    search_items = re.search(CONNECT_TO_NETWORK_RE, connection_request, flags=re.IGNORECASE)
+    data = connection_request['data']
+    search_items = re.search(CONNECT_TO_NETWORK_RE, data, flags=re.IGNORECASE)
     if search_items:
         id_new = search_items.group(1)
         port_new = search_items.group(2)
