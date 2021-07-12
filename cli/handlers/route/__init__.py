@@ -15,7 +15,8 @@ class RouteCommandHandler(CommandHandler):
 
     def handle(self, command: str):
         captured_args = re.fullmatch(self._get_pattern(), command).groupdict()
-        self.node.route_req(dst_id=captured_args['id'])
+        self.node.route_req(dst_id=int(captured_args['id']))
 
-    def _get_pattern(self):
+    @staticmethod
+    def _get_pattern():
         return rf'ROUTE (?P<id>\d+)'
