@@ -34,7 +34,7 @@ class NetFirewall(Firewall[NetRule]):
         self.rules.remove(rule)
 
     def filter(self, packet: Packet, *args, **kwargs) -> Action:
-        for rule in self.rules:
+        for rule in reversed(self.rules):
             if self._match_rule(rule, packet):
                 return rule.action
 

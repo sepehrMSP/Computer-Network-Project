@@ -27,9 +27,6 @@ class AppFirewall(Firewall[AppRule]):
         self.default_action = default_action
 
     def add_rule(self, rule: AppRule):
-        old_rule = next(filter(lambda r: r.app == rule.app, self.rules), None)
-        if old_rule is not None:
-            self.remove_rule(old_rule)
         self.rules.append(rule)
 
     def remove_rule(self, rule: AppRule):
@@ -37,7 +34,7 @@ class AppFirewall(Firewall[AppRule]):
 
     def filter(self, packet_data, *args, **kwargs) -> Action:
         detected_app = self._detect_app(packet_data)
-        for rule in self.rules:
+        for rule in reversed(self.rules):
             if rule.app == detected_app:
                 return rule.action
         return self.default_action
