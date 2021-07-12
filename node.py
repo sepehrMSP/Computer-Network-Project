@@ -10,6 +10,7 @@ class Node:
     PARENT_ID_POS = 2
     PARENT_PORT_POS = -1
     UNKNOWN_ID = -2
+    PORT_IS_NOT_SPECIFIED = -1
 
     def __init__(self, server, net_firewall=None, app_firewall=None):
         self.port: Optional[int] = None
@@ -17,13 +18,13 @@ class Node:
         self.app_firewall = app_firewall
         self.net_firewall = net_firewall
         self.parent_id = None
-        self.parent_port = None
+        self.parent_port = Node.PORT_IS_NOT_SPECIFIED
         self.left_children = set()
         self.right_children = set()
         self.left_child_id = None
-        self.left_child_port = None
+        self.left_child_port = Node.PORT_IS_NOT_SPECIFIED
         self.right_child_id = None
-        self.right_child_port = None
+        self.right_child_port = Node.PORT_IS_NOT_SPECIFIED
         self.known_clients = set()
         self.is_in_chat = False
         self.server = server
@@ -38,6 +39,9 @@ class Node:
         return self.port
 
     def send_tcp(self, data, port: int, host=socket.gethostname(), get_response=False):
+        if port == Node.PORT_IS_NOT_SPECIFIED:
+            return
+
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((host, port))
         data = {'data': data, 'sender_id': self.id}

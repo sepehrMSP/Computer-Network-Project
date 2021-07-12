@@ -15,7 +15,7 @@ class AdvertiseCommandHandler(CommandHandler):
 
     def handle(self, command: str):
         captured_args = re.fullmatch(self._get_pattern(), command).groupdict()
-        self.node.public_advertise(destination_id=captured_args['dst_id'])
+        self.node.public_advertise(destination_id=int(captured_args['dst_id']))
 
     def _get_pattern(self):
         return rf'Advertise (?P<dst_id>\d+)'
