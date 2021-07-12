@@ -1,3 +1,5 @@
+import dataclasses
+from types import SimpleNamespace
 from typing import Optional
 import socket
 from packet import Packet, PacketType
@@ -9,7 +11,7 @@ class Node:
     PARENT_PORT_POS = -1
     UNKNOWN_ID = -2
 
-    def __init__(self, net_firewall=None, app_firewall=None):
+    def __init__(self, server, net_firewall=None, app_firewall=None):
         self.port: Optional[int] = None
         self.id: Optional[int] = None
         self.app_firewall = app_firewall
@@ -24,6 +26,7 @@ class Node:
         self.right_child_port = None
         self.known_clients = set()
         self.is_in_chat = False
+        self.server = server
 
     def is_root(self):
         return self.parent_id == -1
@@ -31,14 +34,20 @@ class Node:
     def get_sending_port(self):
         return self.port + 1
 
-    def get_receiving(self):
+    def get_receiving_port(self):
         return self.port
 
     @staticmethod
     def send_tcp(data, port: int, host=socket.gethostname(), get_response=False):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((host, port))
-        data = json.dumps(data)
+
+        try:
+            data = json.dumps(data)
+        except:
+            data = dataclasses.asdict(data)
+            data = json.dumps(data)
+
         client.send(data.encode('utf-8'))
         resp = None
         if get_response:
@@ -54,8 +63,12 @@ class Node:
         data = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, data=message, get_response=True)
         self.parent_id, self.parent_port = int(data.split()[Node.PARENT_ID_POS]), \
                                            int(data.split()[Node.PARENT_PORT_POS])
+        self.server.set_node(node=self)
+        print(self.parent_id, self.port, 'FIRST TIME?')
+        self.server.start()
         print(self.parent_id, self.port)
         if self.parent_id != -1:
+            self.known_clients.add(self.parent_id)
             packet = Packet(src_id=self.id,
                             dst_id=self.parent_id,
                             packet_type=PacketType.CONN_REQ,
@@ -136,26 +149,31 @@ class Node:
     def receive_tcp(self, conn, addr):
         sender_port = addr[1]
         sender_id = self.get_sender_id(port=sender_port)
-        resp = json.loads(conn.recv(1024).decode('utf-8'))
+        resp = json.loads(conn.recv(1024).decode('utf-8'), object_hook=lambda d: SimpleNamespace(**d))
         conn.close()
         self.receive_packet(packet=resp, sender_id=sender_id)
 
+    def handle_advertise_parent(self, packet: Packet):
+        assert packet.packet_type == PacketType.PARENT_ADV
+        new_child_id = int(packet.data)
+        self.known_clients.add(new_child_id)
+        self.parent_advertise(new_node_id=new_child_id)
+
     def add_new_child(self, packet: Packet):
-        assert (packet.packet_type == PacketType.CONN_REQ) or (packet.packet_type == PacketType.PARENT_ADV)
+        assert packet.packet_type == PacketType.CONN_REQ
         child_id = packet.src_id
         child_port = int(packet.data)
-        if packet.packet_type == PacketType.CONN_REQ:
-            if self.left_child_id is None:
-                self.left_child_id = child_id
-                self.left_child_port = child_port
-                self.left_children.add(child_id)
-            elif self.right_child_id is None:
-                self.right_child_id = child_id
-                self.right_child_port = child_port
-                self.right_children.add(child_id)
-            else:
-                print(f'ERROR: node {self.id} has already 2 children. connection request of node {child_id} rejected')
-                return
+        if self.left_child_id is None:
+            self.left_child_id = child_id
+            self.left_child_port = child_port
+            self.left_children.add(child_id)
+        elif self.right_child_id is None:
+            self.right_child_id = child_id
+            self.right_child_port = child_port
+            self.right_children.add(child_id)
+        else:
+            print(f'ERROR: node {self.id} has already 2 children. connection request of node {child_id} rejected')
+            return
         self.known_clients.add(child_id)
         self.parent_advertise(new_node_id=child_id)
 
@@ -178,6 +196,7 @@ class Node:
 
     def handle_routing_resp_packet(self, packet: Packet, sender_id: int):
         if packet.dst_id == self.id:
+            self.modify_packet(packet=packet, sender_id=sender_id)
             print(f'the path between {packet.src_id} and {packet.dst_id}:\n'
                   f'{packet.data}')
         else:
@@ -212,7 +231,7 @@ class Node:
         elif packet.packet_type == PacketType.ROUTING_RESP:
             self.handle_routing_resp_packet(packet=packet, sender_id=sender_id)
         elif packet.packet_type == PacketType.PARENT_ADV:
-            self.add_new_child(packet=packet)
+            self.handle_advertise_parent(packet=packet)
         elif packet.packet_type == PacketType.PUBLIC_ADV:
             self.handle_public_adv(packet=packet, sender_id=sender_id)
         elif packet.packet_type == PacketType.MESSAGE:
