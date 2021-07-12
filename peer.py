@@ -14,6 +14,7 @@ from firewall.app import AppFirewall
 from firewall.app.detectors.chat import ChatAppDetector
 from firewall.net import NetFirewall
 from node import Node
+from server import Server
 
 
 def cli_thread(clm: CommandLineManager):
@@ -37,7 +38,9 @@ def main():
         ],
     )
     net_firewall = NetFirewall()
+    server = Server()
     node = Node(
+        server=server,
         net_firewall=net_firewall,
         app_firewall=app_firewall,
     )
@@ -51,12 +54,10 @@ def main():
         AppGreetingCommandHandler(node)
     ]
     cl_manager = CommandLineManager(command_handlers)
-    s_thread = threading.Thread(target=server_thread, args=(node,), daemon=True)
     c_thread = threading.Thread(target=cli_thread, args=(cl_manager,), daemon=True)
-    s_thread.start()
     c_thread.start()
-    s_thread.join()
     c_thread.join()
+    server.join()
 
 
 if __name__ == '__main__':
