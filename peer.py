@@ -22,15 +22,6 @@ def cli_thread(clm: CommandLineManager):
         clm.handle(input())
 
 
-def server_thread(node: Node):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((socket.gethostname(), node.get_receiving()))
-        s.listen()
-        while True:
-            conn, addr = s.accept()
-            threading.Thread(target=node.receive_tcp, args=(conn, addr), daemon=True).start()
-
-
 def main():
     app_firewall = AppFirewall(
         detectors=[

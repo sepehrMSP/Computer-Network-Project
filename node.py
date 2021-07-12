@@ -37,9 +37,9 @@ class Node:
     def get_receiving_port(self):
         return self.port
 
-    @staticmethod
-    def send_tcp(data, port: int, host=socket.gethostname(), get_response=False):
+    def send_tcp(self, data, port: int, host=socket.gethostname(), get_response=False):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.bind((socket.gethostname(), self.get_sending_port()))
         client.connect((host, port))
 
         try:
@@ -136,27 +136,38 @@ class Node:
                                 data=msg)
         self.send_new_packet(message_packet)
 
-    def get_sender_id(self, port: int) -> int:
-        if port == self.parent_port:
+    @staticmethod
+    def convert_send_port_to_receive_port(sender_port: int):
+        return sender_port - 1
+
+    def get_sender_id(self, sender_port: int) -> int:
+        port = self.convert_send_port_to_receive_port(sender_port=sender_port)
+        if self.parent_port == port:
             return self.parent_id
-        elif port == self.left_child_port:
+        elif self.left_child_port == port:
             return self.left_child_id
-        elif port == self.right_child_port:
+        elif self.right_child_port == port:
             return self.right_child_id
         else:
             return Node.UNKNOWN_ID
 
     def receive_tcp(self, conn, addr):
         sender_port = addr[1]
-        sender_id = self.get_sender_id(port=sender_port)
+        print(conn, addr)
+        print(f'sender_port {sender_port}')
+        sender_id = self.get_sender_id(sender_port=sender_port)
         resp = json.loads(conn.recv(1024).decode('utf-8'), object_hook=lambda d: SimpleNamespace(**d))
         conn.close()
         self.receive_packet(packet=resp, sender_id=sender_id)
 
-    def handle_advertise_parent(self, packet: Packet):
+    def handle_advertise_parent(self, packet: Packet, sender_id: int):
         assert packet.packet_type == PacketType.PARENT_ADV
         new_child_id = int(packet.data)
         self.known_clients.add(new_child_id)
+        if sender_id == self.left_child_id:
+            self.left_children.add(new_child_id)
+        elif sender_id == self.right_child_id:
+            self.right_children.add(new_child_id)
         self.parent_advertise(new_node_id=new_child_id)
 
     def add_new_child(self, packet: Packet):
@@ -231,7 +242,7 @@ class Node:
         elif packet.packet_type == PacketType.ROUTING_RESP:
             self.handle_routing_resp_packet(packet=packet, sender_id=sender_id)
         elif packet.packet_type == PacketType.PARENT_ADV:
-            self.handle_advertise_parent(packet=packet)
+            self.handle_advertise_parent(packet=packet, sender_id=sender_id)
         elif packet.packet_type == PacketType.PUBLIC_ADV:
             self.handle_public_adv(packet=packet, sender_id=sender_id)
         elif packet.packet_type == PacketType.MESSAGE:
