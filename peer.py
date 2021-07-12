@@ -8,6 +8,7 @@ from cli.handlers.app_firewall import AppFirewallCommandHandler
 from cli.handlers.connect import ConnectCommandHandler
 from cli.handlers.known_clients import KnownClientsCommandHandler
 from cli.handlers.net_firewall import NetFirewallCommandHandler
+from cli.handlers.app_greeting import AppGreetingCommandHandler
 from cli.manager import CommandLineManager
 from firewall.app import AppFirewall
 from firewall.app.detectors.chat import ChatAppDetector
@@ -47,9 +48,15 @@ def main():
         AdvertiseCommandHandler(node),
         KnownClientsCommandHandler(node),
         RouteCommandHandler(node),
+        AppGreetingCommandHandler(node)
     ]
     cl_manager = CommandLineManager(command_handlers)
-    cli_thread(cl_manager)
+    s_thread = threading.Thread(target=server_thread, args=(node,), daemon=True)
+    c_thread = threading.Thread(target=cli_thread, args=(cl_manager,), daemon=True)
+    s_thread.start()
+    c_thread.start()
+    s_thread.join()
+    c_thread.join()
 
 
 if __name__ == '__main__':

@@ -54,6 +54,7 @@ class Node:
         data = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, data=message, get_response=True)
         self.parent_id, self.parent_port = int(data.split()[Node.PARENT_ID_POS]), \
                                            int(data.split()[Node.PARENT_PORT_POS])
+        print(self.parent_id, self.port)
         if self.parent_id != -1:
             packet = Packet(src_id=self.id,
                             dst_id=self.parent_id,
@@ -108,12 +109,19 @@ class Node:
     def send_new_packet(self, packet: Packet):
         sender_id = self.id
         if packet.dst_id != -1:
-            if packet.dst_id in self.known_clients:
+            if packet.dst_id in self.known_clients or packet.packet_type == PacketType.CONN_REQ:
                 self.route_packet(packet=packet)
             else:
                 print(f'Unknown destination {packet.dst_id}')
         else:
             self.route_to_all(packet=packet, sender_id=sender_id)
+
+    def send_new_message(self, msg, dst):
+        message_packet = Packet(src_id=self.id,
+                                dst_id=dst,
+                                packet_type=PacketType.MESSAGE,
+                                data=msg)
+        self.send_new_packet(message_packet)
 
     def get_sender_id(self, port: int) -> int:
         if port == self.parent_port:
@@ -186,6 +194,11 @@ class Node:
             self.transmit_packet(packet=packet)
 
     def handle_application_layer(self, packet: Packet):
+        if packet.data.strip().lower() == 'salam salam sad ta salam':
+            self.send_new_message(msg='Hezaro Sisad Ta Salam', dst=packet.src_id)
+        elif packet.data.strip().lower() == 'Hezaro Sisad Ta Salam':
+            pass
+        print(f'FROM {packet.src_id}:\n\t{packet.data}')
         pass
 
     def receive_packet(self, packet: Packet, sender_id: int):
