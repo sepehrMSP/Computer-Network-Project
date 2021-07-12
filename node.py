@@ -39,6 +39,7 @@ class Node:
 
     def send_tcp(self, data, port: int, host=socket.gethostname(), get_response=False):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         client.bind((socket.gethostname(), self.get_sending_port()))
         client.connect((host, port))
 
