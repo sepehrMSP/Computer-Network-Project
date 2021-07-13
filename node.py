@@ -115,6 +115,10 @@ class Node:
         elif sender_id == self.right_child_id:
             self.send_tcp(data=packet, port=self.parent_port)
             self.send_tcp(data=packet, port=self.left_child_port)
+        else:
+            self.send_tcp(data=packet, port=self.parent_port)
+            self.send_tcp(data=packet, port=self.left_child_port)
+            self.send_tcp(data=packet, port=self.right_child_port)
 
     """
     For packets whose initiator is another host 
