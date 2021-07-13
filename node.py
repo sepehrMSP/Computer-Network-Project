@@ -252,7 +252,7 @@ class Node:
 
     def greeting(self, packet: Packet):
         if packet.data.strip().lower() == 'salam salam sad ta salam':
-            self.send_new_message(msg='Hezaro Sisad Ta Salam', dst=packet.src_id)
+            self.send_new_message(msg='Hezaro Sisad Ta Salam', dst_id=packet.src_id)
         elif packet.data.strip().lower() == 'Hezaro Sisad Ta Salam':
             pass
         print(f'FROM {packet.src_id}:\n\t{packet.data}')
