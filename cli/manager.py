@@ -17,4 +17,5 @@ class CommandLineManager:
                     handler.handle(command)
                 except CommandError as e:
                     print(e)
-                break
+                return
+        print("Invalid Command !")
