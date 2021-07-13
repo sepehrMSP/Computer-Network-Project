@@ -31,7 +31,7 @@ def main():
         ],
     )
     net_firewall = NetFirewall()
-    server = Server()
+    server = Server(daemon=True)
     node = Node(
         server=server,
         net_firewall=net_firewall,
@@ -50,7 +50,6 @@ def main():
     c_thread = threading.Thread(target=cli_thread, args=(cl_manager,), daemon=True)
     c_thread.start()
     c_thread.join()
-    server.join()
 
 
 if __name__ == '__main__':
