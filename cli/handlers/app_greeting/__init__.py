@@ -14,8 +14,9 @@ class AppGreetingCommandHandler(CommandHandler):
         return False
 
     def handle(self, command: str):
-        captured_args = re.fullmatch(self._get_pattern(), command).groupdict()
+        captured_args = re.fullmatch(self._get_pattern(), command, flags=re.IGNORECASE).groupdict()
         self.node.send_new_message(msg="Salam Salam Sad Ta Salam", dst=int(captured_args['dst_id']))
 
-    def _get_pattern(self):
+    @staticmethod
+    def _get_pattern():
         return rf'Salam Salam Sad Ta Salam (?P<dst_id>\d+|-1)'

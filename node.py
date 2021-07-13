@@ -148,9 +148,9 @@ class Node:
         else:
             self.route_to_all(packet=packet, sender_id=sender_id)
 
-    def send_new_message(self, msg, dst):
+    def send_new_message(self, msg, dst_id: int):
         message_packet = Packet(src_id=self.id,
-                                dst_id=dst,
+                                dst_id=dst_id,
                                 packet_type=PacketType.MESSAGE,
                                 data=msg)
         self.send_new_packet(message_packet)
@@ -240,7 +240,17 @@ class Node:
         else:
             self.transmit_packet(packet=packet)
 
-    def handle_application_layer(self, packet: Packet):
+    def handle_application_layer(self, packet: Packet, sender_id: int):
+        if packet.dst_id == self.id or packet.dst_id == -1:
+            action: Action = self.app_firewall.filter(packet.data)
+            if action == Action.ACCEPT:
+                self.greeting(packet=packet)
+            if packet.dst_id == -1:
+                self.transmit_packet(packet=packet, sender_id=sender_id)
+        else:
+            self.transmit_packet(packet=packet)
+
+    def greeting(self, packet: Packet):
         if packet.data.strip().lower() == 'salam salam sad ta salam':
             self.send_new_message(msg='Hezaro Sisad Ta Salam', dst=packet.src_id)
         elif packet.data.strip().lower() == 'Hezaro Sisad Ta Salam':
@@ -263,9 +273,7 @@ class Node:
         elif packet.packet_type == PacketType.PUBLIC_ADV:
             self.handle_public_adv(packet=packet, sender_id=sender_id)
         elif packet.packet_type == PacketType.MESSAGE:
-            action: Action = self.app_firewall.filter(packet.data)
-            if action == Action.ACCEPT:
-                self.handle_application_layer(packet=packet)
+            self.handle_application_layer(packet=packet, sender_id=sender_id)
 
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))
