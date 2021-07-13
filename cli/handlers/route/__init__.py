@@ -19,4 +19,4 @@ class RouteCommandHandler(CommandHandler):
 
     @staticmethod
     def _get_pattern():
-        return rf'ROUTE (?P<id>\d+)'
+        return rf'ROUTE (?P<id>\d+|-1)'

@@ -18,4 +18,4 @@ class AppGreetingCommandHandler(CommandHandler):
         self.node.send_new_message(msg="Salam Salam Sad Ta Salam", dst=captured_args['dst_id'])
 
     def _get_pattern(self):
-        return rf'Salam Salam Sad Ta Salam (?P<dst_id>\d+)'
+        return rf'Salam Salam Sad Ta Salam (?P<dst_id>\d+|-1)'

@@ -18,4 +18,4 @@ class AdvertiseCommandHandler(CommandHandler):
         self.node.public_advertise(destination_id=int(captured_args['dst_id']))
 
     def _get_pattern(self):
-        return rf'Advertise (?P<dst_id>\d+)'
+        return rf'Advertise (?P<dst_id>\d+|-1)'
