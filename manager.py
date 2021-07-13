@@ -1,10 +1,11 @@
 import re
 import socket
 import threading
+import json
 from dataclasses import dataclass
 from threading import Thread
 from typing import Optional
-import json
+from server import Server
 
 MANAGER_PORT = 8000
 MANAGER_HOST = socket.gethostname()
@@ -69,11 +70,9 @@ def handle_client(client_socket: socket.socket, client_addr):
 
 
 if __name__ == "__main__":
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((MANAGER_HOST, MANAGER_PORT))
-        print(f"[+] manager listening on {socket.gethostbyname(MANAGER_HOST)}: {MANAGER_PORT}")
-        s.listen()
-        while True:
-            conn, addr = s.accept()
-            Thread(target=handle_client, args=(conn, addr), daemon=True).start()
+    server = Server(
+        address=MANAGER_HOST,
+        port=MANAGER_PORT,
+        client_handler=handle_client,
+    )
+    server.start()

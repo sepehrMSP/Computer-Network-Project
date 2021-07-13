@@ -73,10 +73,11 @@ class Node:
         resp = self.send_tcp(host=MANAGER_HOST, port=MANAGER_PORT, data=message, get_response=True)
         self.parent_id, self.parent_port = int(resp.split()[Node.PARENT_ID_POS]), \
                                            int(resp.split()[Node.PARENT_PORT_POS])
-        self.server.set_node(node=self)
-        print(self.parent_id, self.port, 'FIRST TIME?')
+
+        self.server.set_port(self.get_receiving_port())
+        self.server.set_client_handler(self.receive_tcp)
         self.server.start()
-        print(self.parent_id, self.port)
+
         if self.parent_id != -1:
             self.known_clients.add(self.parent_id)
             packet = Packet(src_id=self.id,
