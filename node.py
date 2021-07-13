@@ -1,4 +1,5 @@
 import dataclasses
+from firewall import Action
 from types import SimpleNamespace
 from typing import Optional
 import socket
@@ -134,7 +135,10 @@ class Node:
         sender_id = self.id
         if packet.dst_id != -1:
             if packet.dst_id in self.known_clients or packet.packet_type == PacketType.CONN_REQ:
-                self.route_packet(packet=packet)
+                action: Action = self.app_firewall.filter(packet.data)
+                print(action, packet.data)
+                if action == Action.ACCEPT:
+                    self.route_packet(packet=packet)
             else:
                 print(f'Unknown destination {packet.dst_id}')
         else:
@@ -255,7 +259,9 @@ class Node:
         elif packet.packet_type == PacketType.PUBLIC_ADV:
             self.handle_public_adv(packet=packet, sender_id=sender_id)
         elif packet.packet_type == PacketType.MESSAGE:
-            self.handle_application_layer(packet=packet)
+            action: Action = self.app_firewall.filter(packet.data)
+            if action == Action.ACCEPT:
+                self.handle_application_layer(packet=packet)
 
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))

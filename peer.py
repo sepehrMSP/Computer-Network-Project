@@ -1,3 +1,4 @@
+from firewall.app.detectors.greet import GreetAppDetector
 import socket
 import threading
 
@@ -26,6 +27,7 @@ def main():
     app_firewall = AppFirewall(
         detectors=[
             ChatAppDetector(),
+            GreetAppDetector(),
         ],
     )
     net_firewall = NetFirewall()
