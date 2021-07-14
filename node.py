@@ -136,11 +136,14 @@ class Node:
     """
 
     def send_new_packet(self, packet: Packet):
+        action: Action = self.net_firewall.filter(packet, self.id)
+        if action == Action.DROP:
+            return
+
         sender_id = self.id
         if packet.dst_id != -1:
             if packet.dst_id in self.known_clients or packet.packet_type == PacketType.CONN_REQ:
                 action: Action = self.app_firewall.filter(packet.data)
-                print(action, packet.data)
                 if action == Action.ACCEPT:
                     self.route_packet(packet=packet)
             else:
@@ -259,6 +262,10 @@ class Node:
         pass
 
     def receive_packet(self, packet: Packet, sender_id: int):
+        action: Action = self.net_firewall.filter(packet, self.id)
+        if action == Action.DROP:
+            return
+
         self.check_for_new_host(packet=packet)
         if packet.packet_type == PacketType.CONN_REQ:
             self.add_new_child(packet=packet)

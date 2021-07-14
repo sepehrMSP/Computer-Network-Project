@@ -33,16 +33,28 @@ class NetFirewall(Firewall[NetRule]):
     def remove_rule(self, rule: NetRule):
         self.rules.remove(rule)
 
-    def filter(self, packet: Packet, *args, **kwargs) -> Action:
+    def filter(self, packet: Packet, current_node_id: int) -> Action:
+        packet_direction = self._get_packet_direction(packet, current_node_id)
         for rule in reversed(self.rules):
-            if self._match_rule(rule, packet):
+            if self._match_rule(rule, packet, packet_direction):
                 return rule.action
 
         return self.default_action
 
+    def _get_packet_direction(self, packet: Packet, current_node_id: int) -> Direction:
+        if packet.dst_id == current_node_id:
+            return Direction.INPUT
+        elif packet.src_id == current_node_id:
+            return Direction.OUTPUT
+        else:
+            return Direction.FORWARD
+
     @staticmethod
-    def _match_rule(rule: NetRule, packet: Packet) -> bool:
+    def _match_rule(rule: NetRule, packet: Packet, packet_direction: Direction) -> bool:
         if rule.packet_type != packet.packet_type:
+            return False
+
+        if rule.direction != packet_direction:
             return False
 
         src_id_mismatch: bool = (rule.src_id is not None) and (rule.src_id != packet.src_id)
