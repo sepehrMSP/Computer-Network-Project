@@ -10,6 +10,7 @@ from cli.handlers.connect import ConnectCommandHandler
 from cli.handlers.known_clients import KnownClientsCommandHandler
 from cli.handlers.net_firewall import NetFirewallCommandHandler
 from cli.handlers.app_greeting import AppGreetingCommandHandler
+from cli.handlers.start_chat import StartChatCommandHandler
 from cli.manager import CommandLineManager
 from firewall.app import AppFirewall
 from firewall.app.detectors.chat import ChatAppDetector
@@ -44,7 +45,8 @@ def main():
         AdvertiseCommandHandler(node),
         KnownClientsCommandHandler(node),
         RouteCommandHandler(node),
-        AppGreetingCommandHandler(node)
+        AppGreetingCommandHandler(node),
+        StartChatCommandHandler(node),
     ]
     cl_manager = CommandLineManager(command_handlers)
     c_thread = threading.Thread(target=cli_thread, args=(cl_manager,), daemon=True)

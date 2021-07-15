@@ -14,6 +14,7 @@ class Node:
     PORT_IS_NOT_SPECIFIED = -1
 
     def __init__(self, server, net_firewall=None, app_firewall=None):
+        from chat import Chat, ChatMessageType, ChatState
         self.port: Optional[int] = None
         self.id: Optional[int] = None
         self.app_firewall = app_firewall
@@ -29,6 +30,7 @@ class Node:
         self.known_clients = set()
         self.is_in_chat = False
         self.server = server
+        self.ongoing_chat: Chat = None
 
     def is_root(self):
         return self.parent_id == -1
@@ -140,7 +142,7 @@ class Node:
         if packet.dst_id != -1:
             if packet.dst_id in self.known_clients or packet.packet_type == PacketType.CONN_REQ:
                 action: Action = self.app_firewall.filter(packet.data)
-                print(action, packet.data)
+                # print(action, packet.data)
                 if action == Action.ACCEPT:
                     self.route_packet(packet=packet)
             else:
@@ -244,7 +246,11 @@ class Node:
         if packet.dst_id == self.id or packet.dst_id == -1:
             action: Action = self.app_firewall.filter(packet.data)
             if action == Action.ACCEPT:
-                self.greeting(packet=packet)
+                if packet.data.startswith("CHAT:\n"):
+                    packet.data = packet.data.split("\n")[1]
+                    self.chatting(packet=packet)
+                else:
+                    self.greeting(packet=packet)
             if packet.dst_id == -1:
                 self.transmit_packet(packet=packet, sender_id=sender_id)
         else:
@@ -257,6 +263,23 @@ class Node:
             pass
         print(f'FROM {packet.src_id}:\n\t{packet.data}')
         pass
+
+    def chatting(self, packet: Packet):
+        from chat import Chat, ChatMessageType, ChatState
+        message = packet.data
+        message_type = Chat.get_chat_msg_type(msg=message)
+        if message_type == ChatMessageType.START_REQUEST:
+            chat, cli_msg = Chat.onmessage_request_join(msg=message, node=self)
+            self.ongoing_chat = chat
+            chat.node = self
+            print(cli_msg)
+        if self.ongoing_chat:
+            if message_type == ChatMessageType.CHOOSE_NAME:
+                print(self.ongoing_chat.onmessage_accept(message))
+            elif message_type == ChatMessageType.NORMAL_CHAT_MESSAGE:
+                print(self.ongoing_chat.onmessage_normal(message))
+            elif message_type == ChatMessageType.EXIT_CHAT:
+                print(self.ongoing_chat.onmessage_exit(message))
 
     def receive_packet(self, packet: Packet, sender_id: int):
         self.check_for_new_host(packet=packet)
