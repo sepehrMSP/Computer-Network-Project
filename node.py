@@ -138,6 +138,10 @@ class Node:
     """
 
     def send_new_packet(self, packet: Packet):
+        action: Action = self.net_firewall.filter(packet, self.id)
+        if action == Action.DROP:
+            return
+
         sender_id = self.id
         if packet.dst_id != -1:
             if packet.dst_id in self.known_clients or packet.packet_type == PacketType.CONN_REQ:
@@ -282,6 +286,10 @@ class Node:
                 print(self.ongoing_chat.onmessage_exit(message))
 
     def receive_packet(self, packet: Packet, sender_id: int):
+        action: Action = self.net_firewall.filter(packet, self.id)
+        if action == Action.DROP:
+            return
+
         self.check_for_new_host(packet=packet)
         if packet.packet_type == PacketType.CONN_REQ:
             self.add_new_child(packet=packet)
