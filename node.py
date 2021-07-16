@@ -127,6 +127,7 @@ class Node:
     """
 
     def transmit_packet(self, packet: Packet, sender_id: int = None):
+        print(f"{PacketType(packet.packet_type).name} Packet from {packet.src_id} to {packet.dst_id}")
         if packet.dst_id != -1:
             self.route_packet(packet=packet)
         else:
