@@ -206,7 +206,7 @@ class Node:
             self.parent_advertise(new_node_id=child_id)
 
     def check_for_new_host(self, packet: Packet):
-        if packet.dst_id == self.id:
+        if packet.dst_id == self.id or packet.dst_id == -1:
             self.known_clients.add(packet.src_id)
 
     def dest_not_found(self, packet: Packet, input_packet_action, forward_packet_action):
