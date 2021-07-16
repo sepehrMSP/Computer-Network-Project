@@ -178,7 +178,7 @@ class Node:
 
     def receive_tcp(self, conn, addr):
         resp = json.loads(conn.recv(1024).decode('utf-8'))
-        packet = Packet.dict_to_packet(json.loads(resp['data']))
+        packet = Packet(**json.loads(resp['data']))
         sender_id = int(resp['sender_id'])
         conn.close()
         self.receive_packet(packet=packet, sender_id=sender_id)
