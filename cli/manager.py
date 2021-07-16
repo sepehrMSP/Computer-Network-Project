@@ -50,7 +50,7 @@ class CommandLineManager:
                 self.state = CliState.CHOOSE_NAME
                 self.ongoing_chat.state = ChatState.CONFIRM_JOIN
             else:
-                self.state = CliState.NONE_CHAT
+                self.cleanup_onexit()
             return
         elif self.state == CliState.CHOOSE_NAME:
             name = command.split()[0]
