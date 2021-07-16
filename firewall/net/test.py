@@ -22,7 +22,7 @@ class NetFirewallTest(TestCase):
             data="",
         )
         self.firewall.add_rule(rule)
-        self.assertEqual(self.firewall.filter(packet, 2), Action.DROP)
+        self.assertEqual(self.firewall.filter(packet, Direction.INPUT), Action.DROP)
 
     def test_forward_direction_with_destination(self):
         rule = NetRule(
@@ -38,7 +38,7 @@ class NetFirewallTest(TestCase):
             data="",
         )
         self.firewall.add_rule(rule)
-        self.assertEqual(self.firewall.filter(packet, 3), Action.DROP)
+        self.assertEqual(self.firewall.filter(packet, Direction.FORWARD), Action.DROP)
 
     def test_packet_type_mismatch(self):
         rule = NetRule(
@@ -54,4 +54,20 @@ class NetFirewallTest(TestCase):
             data="",
         )
         self.firewall.add_rule(rule)
-        self.assertEqual(self.firewall.filter(packet, 2), self.firewall.default_action)
+        self.assertEqual(self.firewall.filter(packet, Direction.INPUT), self.firewall.default_action)
+
+    def test_send_to_all_packet(self):
+        rule = NetRule(
+            direction=Direction.FORWARD,
+            packet_type=PacketType.MESSAGE,
+            action=Action.DROP,
+        )
+        packet = Packet(
+            src_id=1,
+            dst_id=-1,
+            packet_type=PacketType.MESSAGE,
+            data="",
+        )
+        self.firewall.add_rule(rule)
+        self.assertEqual(self.firewall.filter(packet, Direction.INPUT), Action.ACCEPT)
+        self.assertEqual(self.firewall.filter(packet, Direction.FORWARD), Action.DROP)

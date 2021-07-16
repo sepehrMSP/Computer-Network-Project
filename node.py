@@ -1,4 +1,5 @@
 import dataclasses
+from firewall.net import Direction
 from firewall import Action
 from types import SimpleNamespace
 from typing import Optional
@@ -137,7 +138,7 @@ class Node:
         """
         For packets whose initiator is self
         """
-        action: Action = self.net_firewall.filter(packet, self.id)
+        action: Action = self.net_firewall.filter(packet, Direction.OUTPUT)
         if action == Action.DROP:
             return
 
@@ -167,82 +168,102 @@ class Node:
         conn.close()
         self.receive_packet(packet=packet, sender_id=sender_id)
 
-    def handle_advertise_parent(self, packet: Packet, sender_id: int):
+    def handle_advertise_parent(self, packet: Packet, sender_id: int, input_packet_action):
+        """
+        Advertise the new child to parent will be ignored in case of input firewall drop rule regardless of forward rule.
+        """
         assert packet.packet_type == PacketType.PARENT_ADV
         new_child_id = int(packet.data)
-        self.known_clients.add(new_child_id)
-        if sender_id == self.left_child_id:
-            self.left_children.add(new_child_id)
-        elif sender_id == self.right_child_id:
-            self.right_children.add(new_child_id)
-        self.parent_advertise(new_node_id=new_child_id)
+        if input_packet_action == Action.ACCEPT:
+            self.known_clients.add(new_child_id)
+            if sender_id == self.left_child_id:
+                self.left_children.add(new_child_id)
+            elif sender_id == self.right_child_id:
+                self.right_children.add(new_child_id)
+            self.parent_advertise(new_node_id=new_child_id)
 
-    def add_new_child(self, packet: Packet):
+    def add_new_child(self, packet: Packet, input_packet_action):
+        """
+        Advertise the new child to parent will be ignored in case of input firewall drop rule regardless of forward rule.
+        """
         assert packet.packet_type == PacketType.CONN_REQ
         child_id = packet.src_id
         child_port = int(packet.data)
-        if self.left_child_id is None:
-            self.left_child_id = child_id
-            self.left_child_port = child_port
-            self.left_children.add(child_id)
-        elif self.right_child_id is None:
-            self.right_child_id = child_id
-            self.right_child_port = child_port
-            self.right_children.add(child_id)
-        else:
-            print(f'ERROR: node {self.id} has already 2 children. connection request of node {child_id} rejected')
-            return
-        self.known_clients.add(child_id)
-        self.parent_advertise(new_node_id=child_id)
+        if input_packet_action == Action.ACCEPT:
+            if self.left_child_id is None:
+                self.left_child_id = child_id
+                self.left_child_port = child_port
+                self.left_children.add(child_id)
+            elif self.right_child_id is None:
+                self.right_child_id = child_id
+                self.right_child_port = child_port
+                self.right_children.add(child_id)
+            else:
+                print(f'ERROR: node {self.id} has already 2 children. connection request of node {child_id} rejected')
+                return
+            self.known_clients.add(child_id)
+
+            self.parent_advertise(new_node_id=child_id)
 
     def check_for_new_host(self, packet: Packet):
         if packet.dst_id == self.id:
             self.known_clients.add(packet.src_id)
 
-    def dest_not_found(self, packet: Packet):
+    def dest_not_found(self, packet: Packet, input_packet_action, forward_packet_action):
         if packet.dst_id == self.id:
-            if not self.is_in_chat:
+            if input_packet_action == Action.ACCEPT and not self.is_in_chat:
                 print(f'DESTINATION {packet.dst_id} NOT FOUND')
         else:
-            self.transmit_packet(packet=packet)
+            if forward_packet_action == Action.ACCEPT:
+                self.transmit_packet(packet=packet)
 
-    def handle_routing_req_packet(self, packet: Packet):
+    def handle_routing_req_packet(self, packet: Packet, input_packet_action, forward_packet_action):
         if packet.dst_id == self.id:
-            self.route_resp(packet.src_id)
+            if input_packet_action == Action.ACCEPT:
+                self.route_resp(packet.src_id)
         else:
-            self.transmit_packet(packet=packet)
+            if forward_packet_action == Action.ACCEPT:
+                self.transmit_packet(packet=packet)
 
-    def handle_routing_resp_packet(self, packet: Packet, sender_id: int):
+    def handle_routing_resp_packet(self, packet: Packet, sender_id: int, input_packet_action, forward_packet_action):
         if packet.dst_id == self.id:
-            self.modify_packet(packet=packet, sender_id=sender_id)
-            print(f'the path between {packet.src_id} and {packet.dst_id}:\n'
-                  f'{packet.data}')
+            if input_packet_action == Action.ACCEPT:
+                self.modify_packet(packet=packet, sender_id=sender_id)
+                print(f'the path between {packet.src_id} and {packet.dst_id}:\n'
+                    f'{packet.data}')
         else:
-            self.modify_packet(packet=packet, sender_id=sender_id)
-            self.transmit_packet(packet=packet)
+            if forward_packet_action == Action.ACCEPT:
+                self.modify_packet(packet=packet, sender_id=sender_id)
+                self.transmit_packet(packet=packet)
 
-    def handle_public_adv(self, packet: Packet, sender_id: int):
+    def handle_public_adv(self, packet: Packet, sender_id: int, input_packet_action, forward_packet_action):
         if packet.dst_id == self.id:
-            self.known_clients.add(packet.src_id)
+            if input_packet_action == Action.ACCEPT:
+                self.known_clients.add(packet.src_id)
         elif packet.dst_id == -1:
             self.known_clients.add(packet.src_id)
-            self.transmit_packet(packet=packet, sender_id=sender_id)
-        else:
-            self.transmit_packet(packet=packet)
-
-    def handle_application_layer(self, packet: Packet, sender_id: int):
-        if packet.dst_id == self.id or packet.dst_id == -1:
-            action: Action = self.app_firewall.filter(packet.data)
-            if action == Action.ACCEPT:
-                if packet.data.startswith("CHAT:\n"):
-                    packet.data = packet.data.split("\n")[1]
-                    self.chatting(packet=packet)
-                else:
-                    self.greeting(packet=packet)
-            if packet.dst_id == -1:
+            if forward_packet_action == Action.ACCEPT:
                 self.transmit_packet(packet=packet, sender_id=sender_id)
         else:
-            self.transmit_packet(packet=packet)
+            if forward_packet_action == Action.ACCEPT:
+                self.transmit_packet(packet=packet)
+
+    def handle_application_layer(self, packet: Packet, sender_id: int, input_packet_action, forward_packet_action):
+        if packet.dst_id == self.id or packet.dst_id == -1:
+            if input_packet_action == Action.ACCEPT:
+                action: Action = self.app_firewall.filter(packet.data)
+                if action == Action.ACCEPT:
+                    if packet.data.startswith("CHAT:\n"):
+                        packet.data = packet.data.split("\n")[1]
+                        self.chatting(packet=packet)
+                    else:
+                        self.greeting(packet=packet)
+            if packet.dst_id == -1:
+                if forward_packet_action == Action.ACCEPT:
+                    self.transmit_packet(packet=packet, sender_id=sender_id)
+        else:
+            if forward_packet_action == Action.ACCEPT:
+                self.transmit_packet(packet=packet)
 
     def greeting(self, packet: Packet):
         if packet.data.strip().lower() == 'salam salam sad ta salam':
@@ -270,25 +291,24 @@ class Node:
                 print(self.ongoing_chat.onmessage_exit(message))
 
     def receive_packet(self, packet: Packet, sender_id: int):
-        action: Action = self.net_firewall.filter(packet, self.id)
-        if action == Action.DROP:
-            return
+        input_packet_action: Action = self.net_firewall.filter(packet, Direction.INPUT)
+        forward_packet_action: Action = self.net_firewall.filter(packet, Direction.FORWARD)
 
         self.check_for_new_host(packet=packet)
         if packet.packet_type == PacketType.CONN_REQ:
-            self.add_new_child(packet=packet)
+            self.add_new_child(packet=packet, input_packet_action=input_packet_action)
         elif packet.packet_type == PacketType.DEST_NOT_FOUND:
-            self.dest_not_found(packet=packet)
+            self.dest_not_found(packet=packet, input_packet_action=input_packet_action, forward_packet_action=forward_packet_action)
         elif packet.packet_type == PacketType.ROUTING_REQ:
-            self.handle_routing_req_packet(packet=packet)
+            self.handle_routing_req_packet(packet=packet, input_packet_action=input_packet_action, forward_packet_action=forward_packet_action)
         elif packet.packet_type == PacketType.ROUTING_RESP:
-            self.handle_routing_resp_packet(packet=packet, sender_id=sender_id)
+            self.handle_routing_resp_packet(packet=packet, sender_id=sender_id, input_packet_action=input_packet_action, forward_packet_action=forward_packet_action)
         elif packet.packet_type == PacketType.PARENT_ADV:
-            self.handle_advertise_parent(packet=packet, sender_id=sender_id)
+            self.handle_advertise_parent(packet=packet, sender_id=sender_id, input_packet_action=input_packet_action)
         elif packet.packet_type == PacketType.PUBLIC_ADV:
-            self.handle_public_adv(packet=packet, sender_id=sender_id)
+            self.handle_public_adv(packet=packet, sender_id=sender_id, input_packet_action=input_packet_action, forward_packet_action=forward_packet_action)
         elif packet.packet_type == PacketType.MESSAGE:
-            self.handle_application_layer(packet=packet, sender_id=sender_id)
+            self.handle_application_layer(packet=packet, sender_id=sender_id, input_packet_action=input_packet_action, forward_packet_action=forward_packet_action)
 
     def show_known_clients(self):
         print('Known clients:' + str(self.known_clients))
