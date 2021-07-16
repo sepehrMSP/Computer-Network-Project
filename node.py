@@ -122,11 +122,10 @@ class Node:
             self.send_tcp(data=packet, port=self.left_child_port)
             self.send_tcp(data=packet, port=self.right_child_port)
 
-    """
-    For packets whose initiator is another host 
-    """
-
     def transmit_packet(self, packet: Packet, sender_id: int = None):
+        """
+        For packets whose initiator is another host
+        """
         print(f"{PacketType(packet.packet_type).name} Packet from {packet.src_id} to {packet.dst_id}")
         if packet.dst_id != -1:
             self.route_packet(packet=packet)
@@ -134,11 +133,10 @@ class Node:
             assert sender_id is not None
             self.route_to_all(packet=packet, sender_id=sender_id)
 
-    """
-    For packets whose initiator is self
-    """
-
     def send_new_packet(self, packet: Packet):
+        """
+        For packets whose initiator is self
+        """
         action: Action = self.net_firewall.filter(packet, self.id)
         if action == Action.DROP:
             return
@@ -161,10 +159,6 @@ class Node:
                                 packet_type=PacketType.MESSAGE,
                                 data=msg)
         self.send_new_packet(message_packet)
-
-    @staticmethod
-    def convert_send_port_to_receive_port(sender_port: int):
-        return sender_port - 1
 
     def receive_tcp(self, conn, addr):
         resp = json.loads(conn.recv(1024).decode('utf-8'))
