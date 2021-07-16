@@ -165,17 +165,6 @@ class Node:
     def convert_send_port_to_receive_port(sender_port: int):
         return sender_port - 1
 
-    def get_sender_id(self, sender_port: int) -> int:
-        port = self.convert_send_port_to_receive_port(sender_port=sender_port)
-        if self.parent_port == port:
-            return self.parent_id
-        elif self.left_child_port == port:
-            return self.left_child_id
-        elif self.right_child_port == port:
-            return self.right_child_id
-        else:
-            return Node.UNKNOWN_ID
-
     def receive_tcp(self, conn, addr):
         resp = json.loads(conn.recv(1024).decode('utf-8'))
         packet = Packet(**json.loads(resp['data']))
