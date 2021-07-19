@@ -4,16 +4,19 @@ import re
 from enum import IntEnum
 from threading import Lock
 
+
 class ChatMessageType(IntEnum):
     NORMAL_CHAT_MESSAGE = 0
     START_REQUEST = 1
     CHOOSE_NAME = 2
     EXIT_CHAT = 3
 
+
 class ChatState(IntEnum):
     JOINED = 0
     START_REQUEST = 1
     CONFIRM_JOIN = 2
+
 
 class Chat:
     NORMAL_CHAT_MESSAGE_RE = rf"(?P<name>[a-zA-Z]+): (?P<msg>.+)"
@@ -29,7 +32,7 @@ class Chat:
         self.node = node
         self.my_chat_name = None
         self.accepted_members: Dict[int, bool] = {owner: True}
-        self.member_names : Dict[int, str] = {}
+        self.member_names: Dict[int, str] = {}
         self.modification_lock = Lock()
         self.state: ChatState = None
 
@@ -42,7 +45,7 @@ class Chat:
                 member_has_accepted = False
             if self.node.id != member and (not only_accepted or member_has_accepted):
                 self.node.send_new_message(msg=msg_for_send, dst_id=member)
-    
+
     def send_normal_chat_msg(self, msg):
         self.send_chat_msg(msg=f"{self.member_names[self.node.id]}: {msg}", only_accepted=True)
 
@@ -52,10 +55,15 @@ class Chat:
             self.state = ChatState.JOINED
         message = f"REQUESTS FOR STARTING CHAT WITH {name}: {str(self.members)[1:-1]}"
         self.send_chat_msg(msg=message, only_accepted=False)
-    
+
     def accept_chat(self, name):
         self.my_chat_name = name
         with self.modification_lock:
+            self.node.known_clients.update(self.members)
+            try:
+                self.node.known_clients.remove(self.node.id)
+            except:
+                pass
             self.accepted_members[self.node.id] = False
             self.member_names[self.node.id] = name
             self.state = ChatState.JOINED
@@ -66,7 +74,7 @@ class Chat:
             self.accepted_members[self.node.id] = True
             del self.member_names[self.node.id]
         self.send_chat_msg(f"EXIT CHAT {self.node.id}", only_accepted=False)
-    
+
     @staticmethod
     def onmessage_request_join(msg: str, node: Node):
         captured_args = re.fullmatch(Chat.START_REQUEST_RE, msg).groupdict()
@@ -78,10 +86,10 @@ class Chat:
         result.member_names[owner_id] = owner_name
         result.state = ChatState.START_REQUEST
         return result, f"{owner_name} with id {owner_id} has asked you to join a chat. Would you like to join?[Y/N]"
-    
+
     def onmessage_normal(self, msg):
         return msg
-    
+
     def onmessage_accept(self, msg):
         captured_args = re.fullmatch(Chat.CHOOSE_NAME_RE, msg).groupdict()
         accepted_member_chat_name = captured_args['chat_name']
@@ -110,4 +118,3 @@ class Chat:
             return ChatMessageType.CHOOSE_NAME
         if re.fullmatch(Chat.EXIT_CHAT_RE, msg):
             return ChatMessageType.EXIT_CHAT
-    

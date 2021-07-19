@@ -6,6 +6,7 @@ from enum import IntEnum
 from chat import Chat, ChatState
 from cli.handlers.start_chat import StartChatCommandHandler
 
+
 class CliState(IntEnum):
     NONE_CHAT = 0
     JOINED_CHAT = 1
@@ -14,26 +15,26 @@ class CliState(IntEnum):
 
 
 class CommandLineManager:
-    def __init__(self, handlers: List[CommandHandler] = None, state: CliState=None, ongoing_chat: Chat=None):
+    def __init__(self, handlers: List[CommandHandler] = None, state: CliState = None, ongoing_chat: Chat = None):
         if handlers is None:
             handlers = []
         self.handlers = handlers
         self.state = state
         self.ongoing_chat = ongoing_chat
         self.start_chat_handler: StartChatCommandHandler = self.get_start_chat_handler()
-    
+
     def get_start_chat_handler(self) -> StartChatCommandHandler:
         for handler in self.handlers:
             if type(handler) == StartChatCommandHandler:
                 return handler
-    
+
     def cleanup_onexit(self):
         self.state = CliState.NONE_CHAT
         self.ongoing_chat = None
         self.start_chat_handler.node.ongoing_chat = None
 
     def handle(self, command: str):
-        if not self.ongoing_chat:   
+        if not self.ongoing_chat:
             self.ongoing_chat = self.start_chat_handler.node.ongoing_chat
             if self.ongoing_chat and self.ongoing_chat.state == ChatState.JOINED:
                 self.state = CliState.JOINED_CHAT
